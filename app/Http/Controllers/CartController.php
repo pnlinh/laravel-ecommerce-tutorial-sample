@@ -4,9 +4,26 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Requests\AddCartRequest;
+use App\Models\ProductSku;
 
 class CartController extends Controller
 {
+    public function index(Request $request)
+    {
+        $cart   = $request->session()->get('cart', []);
+        $result = [];
+        foreach ($cart as $skuId => $amount) {
+            if ($sku = ProductSku::find(str_replace('sku_', '', $skuId))) {
+                $result[] = [
+                    'sku'    => $sku,
+                    'amount' => $amount,
+                ];
+            }
+        }
+
+        return view('cart.index', ['cart' => $result]);
+    }
+
     public function add(AddCartRequest $request)
     {
         $key = 'sku_'.$request->input('sku_id');
@@ -21,6 +38,15 @@ class CartController extends Controller
         // 购物车中该商品数量加上用户提交的数量
         $cart[$key] += $amount;
         // 存回 session
+        $request->session()->put('cart', $cart);
+
+        return [];
+    }
+
+    public function remove(ProductSku $sku, Request $request)
+    {
+        $cart  = $request->session()->get('cart', []);
+        unset($cart['sku_'.$sku->id]);
         $request->session()->put('cart', $cart);
 
         return [];
